@@ -11,6 +11,7 @@ interface SimpleOutageTimelineProps {
   intervals: SimpleInterval[];
   height?: number;          // px
   borderRadius?: number;    // px
+  enableVerticalLine?: boolean; // ← NEW
 }
 
 const MINUTES_IN_DAY = 24 * 60;
@@ -24,14 +25,21 @@ const SimpleOutageTimeline: React.FC<SimpleOutageTimelineProps> = ({
                                                                      intervals,
                                                                      height = 40,
                                                                      borderRadius = 10,
+                                                                     enableVerticalLine = true,   // ← NEW DEFAULT
                                                                    }) => {
-  // ticks: 00:00, 02:00, ..., 24:00
+  // Time labels on top: 00:00, 02:00, ..., 24:00
   const ticks: string[] = [];
   for (let h = 0; h <= 24; h += 2) {
     ticks.push(h.toString().padStart(2, "0") + ":00");
   }
 
-  // normalize intervals for positioning on 0–24h
+  // Positions for labels / lines in %
+  const tickPositions = ticks.map((t) => {
+    const minutes = timeToMinutes(t);
+    return (minutes / MINUTES_IN_DAY) * 100;
+  });
+
+  // Normalize intervals for block positioning
   const normalized = intervals.map((i) => {
     const startMin = Math.max(0, timeToMinutes(i.start));
     const endMin = Math.min(MINUTES_IN_DAY, timeToMinutes(i.end));
@@ -46,45 +54,49 @@ const SimpleOutageTimeline: React.FC<SimpleOutageTimelineProps> = ({
 
   return (
       <div style={{width: "100%", fontFamily: "sans-serif", fontSize: 12}}>
-        {/* Top: time ticks */}
+        {/* Top: hour labels */}
         <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
+              position: "relative",
+              width: "100%",
+              height: 16,
               marginBottom: 4,
-              padding: "0 2px",
             }}
         >
-          {ticks.map((t) => (
-              <div key={t} style={{transform: "translateX(-50%)"}}>
-                {t}
-              </div>
-          ))}
+          {ticks.map((label, index) => {
+            const pos = tickPositions[index];
+            return (
+                <div
+                    key={label}
+                    style={{
+                      position: "absolute",
+                      left: `${pos}%`,
+                      transform: "translateX(-50%)",
+                      fontSize: 11,
+                      whiteSpace: "nowrap",
+                    }}
+                >
+                  {label}
+                </div>
+            );
+          })}
         </div>
 
-        {/* Middle: track + working/outage blocks */}
+        {/* Middle: track + blocks + optional vertical lines */}
         <div
             style={{
               position: "relative",
               width: "100%",
               height,
               borderRadius,
-              backgroundColor: "#e0e0e0", // non-working
+              backgroundColor: "#e0e0e0",
               overflow: "hidden",
             }}
         >
+          {/* Red outage/working blocks */}
           {normalized.map((seg, idx) => (
               <div
-                  key={idx}
-                  title={
-                    seg.title
-                        ? `${seg.title}${
-                            seg.status ? ` (${seg.status})` : ""
-                        } ${seg.start}–${seg.end}`
-                        : `${seg.start}–${seg.end}${
-                            seg.status ? ` (${seg.status})` : ""
-                        }`
-                  }
+                  key={`block-${idx}`}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -93,18 +105,42 @@ const SimpleOutageTimeline: React.FC<SimpleOutageTimelineProps> = ({
                     width: `${seg.widthPercent}%`,
                     backgroundColor: "#ff5c5c",
                     borderRadius,
+                    zIndex: 1,
                   }}
               />
           ))}
+
+          {/* OPTIONAL vertical lines (00:00 & 24:00 skipped) */}
+          {enableVerticalLine &&
+              tickPositions.map((pos, index) => {
+                if (index === 0 || index === tickPositions.length - 1) return null;
+
+                return (
+                    <div
+                        key={`tick-line-${index}`}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          bottom: 0,
+                          width: "1px",
+                          backgroundColor: "#c0c0c0",
+                          left: `${pos}%`,
+                          transform: "translateX(-0.5px)",
+                          opacity: 0.9,
+                          zIndex: 2,
+                        }}
+                    />
+                );
+              })}
         </div>
 
-        {/* Bottom: start at beginning of block, end at end of block */}
+        {/* Bottom: start / end labels aligned under edges */}
         <div
             style={{
               position: "relative",
               width: "100%",
               marginTop: 4,
-              height: 18, // label row height
+              height: 18,
             }}
         >
           {normalized.map((seg, idx) => {
@@ -112,8 +148,7 @@ const SimpleOutageTimeline: React.FC<SimpleOutageTimelineProps> = ({
             const endLeft = seg.leftPercent + seg.widthPercent;
 
             return (
-                <React.Fragment key={idx}>
-                  {/* Start time at beginning of block */}
+                <React.Fragment key={`labels-${idx}`}>
                   <div
                       style={{
                         position: "absolute",
@@ -126,7 +161,6 @@ const SimpleOutageTimeline: React.FC<SimpleOutageTimelineProps> = ({
                     {seg.start}
                   </div>
 
-                  {/* End time at end of block */}
                   <div
                       style={{
                         position: "absolute",

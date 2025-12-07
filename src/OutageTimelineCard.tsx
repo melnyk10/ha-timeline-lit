@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import SimpleOutageTimeline, {type SimpleInterval} from "./SimpleOutageTimeline";
+import SimpleOutageTimeline from "./SimpleOutageTimeline";
 
 export interface OutageTimelineCardConfig {
   type: string;
@@ -36,8 +36,6 @@ const OutageTimelineCard: React.FC<OutageTimelineCardProps> = ({config}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const title = config.title ?? "Power outages today";
-
   useEffect(() => {
     let cancelled = false;
 
@@ -72,8 +70,8 @@ const OutageTimelineCard: React.FC<OutageTimelineCardProps> = ({config}) => {
       }
 
       const mapped: OutageInterval[] = dayEntry.intervals.map((i) => ({
-        start: normalizeTime(i.start),
-        end: normalizeTime(i.end),
+        start: i.start,
+        end: i.end,
         title: `Outage (${dayEntry.group})`,
         status: `Scheduled ${dayEntry.schedule_date}`,
       }));
@@ -95,18 +93,8 @@ const OutageTimelineCard: React.FC<OutageTimelineCardProps> = ({config}) => {
     };
   }, [config.api_url, config.schedule_date]);
 
-  const simpleIntervals: SimpleInterval[] = intervals.map((i) => ({
-    start: i.start,
-    end: i.end,
-    title: i.title,
-    status: i.status,
-  }));
-
   return (
       <div style={{padding: "12px", fontFamily: "sans-serif"}}>
-        <div style={{marginBottom: "8px", fontWeight: 600, fontSize: "14px"}}>
-          {title}
-        </div>
 
         {loading && <div style={{fontSize: "12px"}}>Loading outages…</div>}
 
@@ -118,9 +106,8 @@ const OutageTimelineCard: React.FC<OutageTimelineCardProps> = ({config}) => {
 
         {!loading && !error && (
             <SimpleOutageTimeline
-                intervals={simpleIntervals}
-                height={40}
-                borderRadius={10}
+                intervals={intervals}
+                enableVerticalLine={true}
             />
         )}
       </div>
@@ -133,17 +120,6 @@ function getTodayISO(): string {
   const month = `${d.getMonth() + 1}`.padStart(2, "0");
   const day = `${d.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-/**
- * Your API uses "24:00" as end time sometimes.
- * If the timeline lib cannot handle 24:00, convert to 23:59.
- */
-function normalizeTime(time: string): string {
-  if (time === "24:00") {
-    return "23:59";
-  }
-  return time;
 }
 
 export default OutageTimelineCard;
