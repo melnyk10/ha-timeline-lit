@@ -57,34 +57,16 @@ export class TimelineCard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      padding: 20px;
-      border-radius: 12px;
-      border: 1px solid #ddd;
-      box-sizing: border-box;
-      background: #fff;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-      Roboto, Helvetica, Arial, sans-serif;
-      font-size: 13px;
-      color: #222;
+    }
+
+    ha-card {
+      padding: 16px;
     }
 
     .header {
-      margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 600;
-    }
-
-    .status {
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
-
-    .status.error {
-      color: #c0392b;
-    }
-
-    .status.loading {
-      color: #555;
+      margin-bottom: 12px;
     }
   `;
 
@@ -203,15 +185,17 @@ export class TimelineCard extends LitElement {
 
   render() {
     return html`
-      <ha-card .header=${this._title ?? "Outage timeline"}>
+      <ha-card>
+        ${this._title
+            ? html`<div class="header">${this._title}</div>`
+            : nothing}
+
         ${this._loading
-            ? html`
-              <div class="status loading">Loading outages…</div>`
+            ? html`<div class="status loading">Loading outages…</div>`
             : nothing}
 
         ${this._error
-            ? html`
-              <div class="status error">Error: ${this._error}</div>`
+            ? html`<div class="status error">Error: ${this._error}</div>`
             : nothing}
 
         <simple-outage-timeline
