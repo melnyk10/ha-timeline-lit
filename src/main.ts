@@ -1,4 +1,4 @@
-import "./outage-timeline-card";
+import "./timeline-card";
 
 const card = document.querySelector(
     "outage-timeline-card"

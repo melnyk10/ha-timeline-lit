@@ -16,7 +16,7 @@ function timeToMinutes(time: string): number {
 }
 
 @customElement("simple-outage-timeline")
-export class SimpleOutageTimeline extends LitElement {
+export class OutageTimeline extends LitElement {
 
   @property({type: Array})
   intervals: SimpleInterval[] = [];
@@ -202,6 +202,6 @@ export class SimpleOutageTimeline extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "simple-outage-timeline": SimpleOutageTimeline;
+    "simple-outage-timeline": OutageTimeline;
   }
 }

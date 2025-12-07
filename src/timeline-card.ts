@@ -1,7 +1,7 @@
 import {css, html, LitElement, nothing} from "lit";
 import {customElement, property, state} from "lit/decorators.js";
-import "./simple-outage-timeline";
-import type {SimpleInterval} from "./simple-outage-timeline";
+import "./outage-timeline";
+import type {SimpleInterval} from "./outage-timeline";
 
 interface ApiInterval {
   start: string;
@@ -16,7 +16,7 @@ interface ApiDayEntry {
 }
 
 @customElement("outage-timeline-card")
-export class OutageTimelineCard extends LitElement {
+export class TimelineCard extends LitElement {
   @property({type: String, attribute: "api-url"})
   apiUrl: string = "";
 
@@ -41,7 +41,7 @@ export class OutageTimelineCard extends LitElement {
   static styles = css`
     :host {
       display: block;
-      padding: 12px;
+      padding: 20px;
       border-radius: 12px;
       border: 1px solid #ddd;
       box-sizing: border-box;
@@ -126,7 +126,7 @@ export class OutageTimelineCard extends LitElement {
         status: `Scheduled ${dayEntry.schedule_date}`,
       }));
     } catch (e: any) {
-      console.error("OutageTimelineCard fetch error:", e);
+      console.error("TimelineCard fetch error:", e);
       this._error = e?.message ?? "Error loading outages";
     } finally {
       this._loading = false;
@@ -162,8 +162,6 @@ export class OutageTimelineCard extends LitElement {
 
   render() {
     return html`
-      <div class="header">Outage timeline</div>
-
       ${this._loading
           ? html`
             <div class="status loading">Loading outages…</div>`
@@ -186,6 +184,6 @@ export class OutageTimelineCard extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    "outage-timeline-card": OutageTimelineCard;
+    "outage-timeline-card": TimelineCard;
   }
 }
