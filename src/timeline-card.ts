@@ -15,8 +15,20 @@ interface ApiDayEntry {
   intervals: ApiInterval[];
 }
 
+// Lovelace config type
+interface OutageTimelineCardConfig {
+  type: string;           // required by Lovelace
+  title?: string;
+  api_url: string;        // <-- used to set apiUrl
+  schedule_date?: string; // optional
+  enable_vertical_line?: boolean;
+}
+
 @customElement("outage-timeline-card")
 export class TimelineCard extends LitElement {
+  // Lovelace will set this.hass = hass
+  private _hass: any;
+
   @property({type: String, attribute: "api-url"})
   apiUrl: string = "";
 
@@ -37,6 +49,10 @@ export class TimelineCard extends LitElement {
 
   @state()
   private _error: string | null = null;
+
+  // Optional: store title so we can show it
+  @state()
+  private _title: string | undefined;
 
   static styles = css`
     :host {
@@ -72,16 +88,41 @@ export class TimelineCard extends LitElement {
     }
   `;
 
+  // === Lovelace required API ===
+
+  // Called once when user configures the card
+  public setConfig(config: OutageTimelineCardConfig): void {
+    if (!config.api_url) {
+      throw new Error("api_url is required in card config");
+    }
+
+    this._title = config.title;
+    this.apiUrl = config.api_url;
+    this.scheduleDate = config.schedule_date;
+    this.enableVerticalLine =
+        config.enable_vertical_line ?? this.enableVerticalLine;
+
+    // trigger fetch when config comes
+    this._fetchIfReady();
+  }
+
+  // HA injects hass object so you can access entities if needed
+  set hass(hass: any) {
+    this._hass = hass;
+  }
+
+  // Hint to HA how tall the card is in "rows"
+  public getCardSize(): number {
+    return 4;
+  }
+
   connectedCallback(): void {
     super.connectedCallback();
     this._fetchIfReady();
   }
 
   updated(changedProps: Map<string, unknown>): void {
-    if (
-        changedProps.has("apiUrl") ||
-        changedProps.has("scheduleDate")
-    ) {
+    if (changedProps.has("apiUrl") || changedProps.has("scheduleDate")) {
       this._fetchIfReady();
     }
   }
@@ -162,22 +203,24 @@ export class TimelineCard extends LitElement {
 
   render() {
     return html`
-      ${this._loading
-          ? html`
-            <div class="status loading">Loading outages…</div>`
-          : nothing}
+      <ha-card .header=${this._title ?? "Outage timeline"}>
+        ${this._loading
+            ? html`
+              <div class="status loading">Loading outages…</div>`
+            : nothing}
 
-      ${this._error
-          ? html`
-            <div class="status error">Error: ${this._error}</div>`
-          : nothing}
+        ${this._error
+            ? html`
+              <div class="status error">Error: ${this._error}</div>`
+            : nothing}
 
-      <simple-outage-timeline
-          .intervals=${this._intervals}
-          .height=${40}
-          .borderRadius=${10}
-          .enableVerticalLine=${this.enableVerticalLine}
-      ></simple-outage-timeline>
+        <simple-outage-timeline
+            .intervals=${this._intervals}
+            .height=${40}
+            .borderRadius=${10}
+            .enableVerticalLine=${this.enableVerticalLine}
+        ></simple-outage-timeline>
+      </ha-card>
     `;
   }
 }
