@@ -42,10 +42,17 @@ export class OutageTimeline extends LitElement {
   static styles = css`
     :host {
       display: block;
+      //padding: 25px;
+      //border-radius: 12px;
+      //border: 1px solid #ddd;
+      //box-sizing: border-box;
+      //background: #fff;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, Helvetica, Arial, sans-serif;
       font-size: 12px;
       color: #222;
+      margin-left: 12px;
+      margin-right: 12px;
     }
 
     .top-labels {
@@ -98,7 +105,8 @@ export class OutageTimeline extends LitElement {
     .bottom-label {
       position: absolute;
       transform: translateX(-50%);
-      font-size: 11px;
+      font-size: 14px;
+      font-weight: bold;
       white-space: nowrap;
     }
   `;
