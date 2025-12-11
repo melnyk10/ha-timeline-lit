@@ -61,6 +61,10 @@ export class TimelineCard extends LitElement {
 
     ha-card {
       padding: 16px;
+      background: var(--ha-card-background, var(--card-background-color));
+      color: var(--primary-text-color);
+      border-radius: var(--ha-card-border-radius, 12px);
+      box-shadow: var(--ha-card-box-shadow);
     }
 
     .header {

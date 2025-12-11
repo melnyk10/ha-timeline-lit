@@ -41,16 +41,18 @@ export class OutageTimeline extends LitElement {
 
   static styles = css`
     :host {
+      --timeline-text-color: var(--primary-text-color);
+      --timeline-track-background: #e0e0e0;
+      --timeline-block-color: #ea3434;
+      --timeline-hour-line-color: #c0c0c0;
+      --timeline-top-label-color: var(--secondary-text-color);
+      --timeline-bottom-label-color: var(--primary-text-color);
+
       display: block;
-      //padding: 25px;
-      //border-radius: 12px;
-      //border: 1px solid #ddd;
-      //box-sizing: border-box;
-      //background: #fff;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
       Roboto, Helvetica, Arial, sans-serif;
       font-size: 12px;
-      color: #222;
+      color: var(--timeline-text-color);
       margin-left: 12px;
       margin-right: 12px;
     }
@@ -67,12 +69,13 @@ export class OutageTimeline extends LitElement {
       transform: translateX(-50%);
       font-size: 11px;
       white-space: nowrap;
+      color: var(--timeline-top-label-color);
     }
 
     .track {
       position: relative;
       width: 100%;
-      background-color: #e0e0e0;
+      background-color: var(--timeline-track-background);
       overflow: hidden;
     }
 
@@ -80,7 +83,7 @@ export class OutageTimeline extends LitElement {
       position: absolute;
       top: 0;
       bottom: 0;
-      background-color: #ff5c5c;
+      background-color: var(--timeline-block-color);
       z-index: 1;
     }
 
@@ -89,7 +92,7 @@ export class OutageTimeline extends LitElement {
       top: 0;
       bottom: 0;
       width: 1px;
-      background-color: #c0c0c0;
+      background-color: var(--timeline-hour-line-color);
       opacity: 0.9;
       transform: translateX(-0.5px);
       z-index: 2; /* draw over blocks */
@@ -108,6 +111,7 @@ export class OutageTimeline extends LitElement {
       font-size: 14px;
       font-weight: bold;
       white-space: nowrap;
+      color: var(--timeline-bottom-label-color);
     }
   `;
 
