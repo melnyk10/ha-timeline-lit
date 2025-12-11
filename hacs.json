@@ -4,5 +4,5 @@
   "render_readme": true,
   "homeassistant": "2024.12.0",
   "country": "UA",
-  "filename": "dist/outage-timeline-card.js"
+  "filename": "outage-timeline-card.js"
 }
