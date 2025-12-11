@@ -50,11 +50,15 @@ Once added:
 Add a **Manual** card to your dashboard and paste:
 
 ```yaml
-type: custom:outage-timeline-card
-title: "Electricity outages"
-api_url: "http://your-api/api/v1/outages"
-schedule_date: "2025-12-07"     # optional — defaults to today
-enable_vertical_line: true      # optional — defaults to true
+type: grid
+cards:
+  - type: custom:outage-timeline-card
+    api_url: http://your-api/api/v1/outages
+    enable_vertical_line: true # optional — defaults to true
+    grid_options:
+      columns: full
+      rows: 2
+column_span: 2
 ```
 
 Works with **YAML dashboards** and **UI dashboards**.
