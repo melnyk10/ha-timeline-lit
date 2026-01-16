@@ -231,7 +231,14 @@ export class OutageTimeline extends LitElement {
                 <div class="top-labels">
                   ${compactTopLabels.map(
                       (t) => html`
-                        <div class="top-label" style="left: ${t.posPercent}%">
+                        <div
+                            class="top-label ${t.posPercent === 0
+                                ? "label-left"
+                                : t.posPercent === 100
+                                  ? "label-right"
+                                  : ""}"
+                            style="left: ${t.posPercent}%"
+                        >
                           ${t.label}
                         </div>
                       `
@@ -284,7 +291,14 @@ export class OutageTimeline extends LitElement {
         <div class="top-labels">
           ${ticks.map(
               (t) => html`
-                <div class="top-label" style="left: ${t.posPercent}%">
+                <div
+                    class="top-label ${t.posPercent === 0
+                        ? "label-left"
+                        : t.posPercent === 100
+                          ? "label-right"
+                          : ""}"
+                    style="left: ${t.posPercent}%"
+                >
                   ${t.label}
                 </div>
               `

@@ -60,6 +60,9 @@ export class TimelineCard extends LitElement {
   @state()
   private _isCompact: boolean = false;
 
+  @state()
+  private _noOutages: boolean = false;
+
   private _mediaQuery?: MediaQueryList;
 
   static styles = css`
@@ -139,6 +142,7 @@ export class TimelineCard extends LitElement {
     this._error = null;
     this._intervals = [];
     this._allIntervals = [];
+    this._noOutages = false;
 
     try {
       const response = await fetch(this.apiUrl);
@@ -163,12 +167,24 @@ export class TimelineCard extends LitElement {
         return;
       }
 
-      this._allIntervals = dayEntry.intervals.map((i) => ({
-        start: this._normalizeTime(i.start),
-        end: this._normalizeTime(i.end),
-        title: `Outage (${dayEntry.group})`,
-        status: `Scheduled ${dayEntry.schedule_date}`,
-      }));
+      if (!dayEntry.intervals.length) {
+        this._noOutages = true;
+        this._allIntervals = [
+          {
+            start: "00:00",
+            end: "24:00",
+            title: "No outages",
+            status: `Scheduled ${dayEntry.schedule_date}`,
+          },
+        ];
+      } else {
+        this._allIntervals = dayEntry.intervals.map((i) => ({
+          start: this._normalizeTime(i.start),
+          end: this._normalizeTime(i.end),
+          title: `Outage (${dayEntry.group})`,
+          status: `Scheduled ${dayEntry.schedule_date}`,
+        }));
+      }
       this._intervals = this._getDisplayIntervals();
     } catch (e: any) {
       console.error("TimelineCard fetch error:", e);
@@ -211,6 +227,9 @@ export class TimelineCard extends LitElement {
   };
 
   private _getDisplayIntervals(): SimpleInterval[] {
+    if (this._noOutages) {
+      return this._allIntervals;
+    }
     if (this._isCompact) {
       return this._selectClosestInterval(this._allIntervals);
     }
@@ -286,6 +305,7 @@ export class TimelineCard extends LitElement {
             .borderRadius=${10}
             .enableVerticalLine=${this.enableVerticalLine}
             .compact=${this._isCompact}
+            style=${this._noOutages ? "--timeline-block-color: #3bb54a;" : ""}
         ></simple-outage-timeline>
       </ha-card>
     `;
