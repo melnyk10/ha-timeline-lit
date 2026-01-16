@@ -54,6 +54,14 @@ export class TimelineCard extends LitElement {
   @state()
   private _title: string | undefined;
 
+  @state()
+  private _allIntervals: SimpleInterval[] = [];
+
+  @state()
+  private _isCompact: boolean = false;
+
+  private _mediaQuery?: MediaQueryList;
+
   static styles = css`
     :host {
       display: block;
@@ -104,7 +112,15 @@ export class TimelineCard extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this._mediaQuery = window.matchMedia("(max-width: 600px)");
+    this._isCompact = this._mediaQuery.matches;
+    this._mediaQuery.addEventListener("change", this._handleMediaChange);
     this._fetchIfReady();
+  }
+
+  disconnectedCallback(): void {
+    this._mediaQuery?.removeEventListener("change", this._handleMediaChange);
+    super.disconnectedCallback();
   }
 
   updated(changedProps: Map<string, unknown>): void {
@@ -122,6 +138,7 @@ export class TimelineCard extends LitElement {
     this._loading = true;
     this._error = null;
     this._intervals = [];
+    this._allIntervals = [];
 
     try {
       const response = await fetch(this.apiUrl);
@@ -146,12 +163,13 @@ export class TimelineCard extends LitElement {
         return;
       }
 
-      this._intervals = dayEntry.intervals.map((i) => ({
+      this._allIntervals = dayEntry.intervals.map((i) => ({
         start: this._normalizeTime(i.start),
         end: this._normalizeTime(i.end),
         title: `Outage (${dayEntry.group})`,
         status: `Scheduled ${dayEntry.schedule_date}`,
       }));
+      this._intervals = this._getDisplayIntervals();
     } catch (e: any) {
       console.error("TimelineCard fetch error:", e);
       this._error = e?.message ?? "Error loading outages";
@@ -187,6 +205,66 @@ export class TimelineCard extends LitElement {
     return time;
   }
 
+  private _handleMediaChange = (event: MediaQueryListEvent) => {
+    this._isCompact = event.matches;
+    this._intervals = this._getDisplayIntervals();
+  };
+
+  private _getDisplayIntervals(): SimpleInterval[] {
+    if (this._isCompact) {
+      return this._selectClosestInterval(this._allIntervals);
+    }
+    return this._allIntervals;
+  }
+
+  private _selectClosestInterval(
+    intervals: SimpleInterval[]
+  ): SimpleInterval[] {
+    if (!intervals.length) return [];
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(":").map(Number);
+      if (h === 24) return 24 * 60;
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    let current: SimpleInterval | null = null;
+    let next: SimpleInterval | null = null;
+    let nextDelta = Number.POSITIVE_INFINITY;
+    let past: SimpleInterval | null = null;
+    let pastDelta = Number.POSITIVE_INFINITY;
+
+    for (const interval of intervals) {
+      const start = toMinutes(interval.start);
+      const end = toMinutes(interval.end);
+
+      if (nowMinutes >= start && nowMinutes <= end) {
+        current = interval;
+        break;
+      }
+
+      if (start >= nowMinutes) {
+        const delta = start - nowMinutes;
+        if (delta < nextDelta) {
+          nextDelta = delta;
+          next = interval;
+        }
+      } else if (nowMinutes > end) {
+        const delta = nowMinutes - end;
+        if (delta < pastDelta) {
+          pastDelta = delta;
+          past = interval;
+        }
+      }
+    }
+
+    if (current) return [current];
+    if (next) return [next];
+    return past ? [past] : [];
+  }
+
   render() {
     return html`
       <ha-card>
@@ -207,6 +285,7 @@ export class TimelineCard extends LitElement {
             .height=${40}
             .borderRadius=${10}
             .enableVerticalLine=${this.enableVerticalLine}
+            .compact=${this._isCompact}
         ></simple-outage-timeline>
       </ha-card>
     `;

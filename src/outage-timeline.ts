@@ -39,6 +39,12 @@ export class OutageTimeline extends LitElement {
   @property({type: Boolean, attribute: "enable-vertical-line"})
   enableVerticalLine: boolean = true;
 
+  /**
+   * Compact mode shows only outage pieces (no full timeline).
+   */
+  @property({type: Boolean})
+  compact: boolean = false;
+
   static styles = css`
     :host {
       --timeline-text-color: var(--primary-text-color);
@@ -55,6 +61,17 @@ export class OutageTimeline extends LitElement {
       color: var(--timeline-text-color);
       margin-left: 12px;
       margin-right: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .timeline {
+      min-width: var(--timeline-min-width, 520px);
+    }
+
+    .compact-timeline {
+      min-width: 0;
+      width: 100%;
     }
 
     .top-labels {
@@ -113,16 +130,70 @@ export class OutageTimeline extends LitElement {
       white-space: nowrap;
       color: var(--timeline-bottom-label-color);
     }
+
+    .label-left {
+      transform: translateX(0);
+    }
+
+    .label-right {
+      transform: translateX(-100%);
+    }
+
+    @media (max-width: 520px) {
+      :host {
+        margin-left: 8px;
+        margin-right: 8px;
+      }
+
+      .top-label {
+        font-size: 10px;
+      }
+
+      .bottom-label {
+        font-size: 12px;
+      }
+    }
+
+    .compact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
   `;
 
-  private getTicks(): { label: string; posPercent: number }[] {
+  private getTicks(
+    startMinute: number = 0,
+    endMinute: number = MINUTES_IN_DAY
+  ): { label: string; posPercent: number }[] {
     const out: { label: string; posPercent: number }[] = [];
+    const span = endMinute - startMinute;
+    if (span <= 0) return out;
     for (let h = 0; h <= 24; h += 2) {
+      const minute = h * 60;
+      if (minute < startMinute || minute > endMinute) continue;
       const label = `${h.toString().padStart(2, "0")}:00`;
-      const posPercent = (h * 60 / MINUTES_IN_DAY) * 100;
+      const posPercent = ((minute - startMinute) / span) * 100;
       out.push({label, posPercent});
     }
     return out;
+  }
+
+  private getBoundsTicks(
+    startMinute: number,
+    endMinute: number
+  ): { label: string; posPercent: number }[] {
+    if (endMinute <= startMinute) return [];
+    return [
+      {label: this.formatMinutes(startMinute), posPercent: 0},
+      {label: this.formatMinutes(endMinute), posPercent: 100},
+    ];
+  }
+
+  private formatMinutes(minutes: number): string {
+    const total = Math.max(0, Math.min(minutes, MINUTES_IN_DAY));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
 
   private getNormalizedIntervals() {
@@ -137,76 +208,145 @@ export class OutageTimeline extends LitElement {
   }
 
   render() {
-    const ticks = this.getTicks();
     const normalized = this.getNormalizedIntervals();
+    const ticks = this.getTicks();
+
+    if (this.compact) {
+      return html`
+        <div class="compact-list">
+          ${normalized.map((seg) => {
+            const label =
+                `${seg.title ?? "Outage"}` +
+                (seg.status ? ` (${seg.status})` : "") +
+                ` ${seg.start}–${seg.end}`;
+
+            const startMin = timeToMinutes(seg.start);
+            const endMin = timeToMinutes(seg.end);
+            const compactTicks = this.getTicks(startMin, endMin);
+            const compactBounds = this.getBoundsTicks(startMin, endMin);
+            const compactTopLabels = compactBounds.concat(compactTicks);
+
+            return html`
+              <div class="timeline compact-timeline">
+                <div class="top-labels">
+                  ${compactTopLabels.map(
+                      (t) => html`
+                        <div class="top-label" style="left: ${t.posPercent}%">
+                          ${t.label}
+                        </div>
+                      `
+                  )}
+                </div>
+
+                <div
+                    class="track"
+                    style="
+                    height: ${this.height}px;
+                    border-radius: ${this.borderRadius}px;
+                  "
+                >
+                  <div
+                      class="block"
+                      title="${label}"
+                      style="
+                      left: 0%;
+                      width: 100%;
+                      border-radius: ${this.borderRadius}px;
+                    "
+                  ></div>
+
+                  ${this.enableVerticalLine
+                      ? compactTicks.map(
+                          (t) =>
+                            html`<div class="hour-line" style="left: ${t.posPercent}%"></div>`
+                        )
+                      : nothing}
+                </div>
+
+                <div class="bottom-labels">
+                  <div class="bottom-label label-left" style="left: 0%">
+                    ${seg.start}
+                  </div>
+                  <div class="bottom-label label-right" style="left: 100%">
+                    ${seg.end}
+                  </div>
+                </div>
+              </div>
+            `;
+          })}
+        </div>
+      `;
+    }
 
     return html`
-      <!-- Top hour labels -->
-      <div class="top-labels">
-        ${ticks.map(
-            (t) => html`
-              <div class="top-label" style="left: ${t.posPercent}%">
-                ${t.label}
+      <div class="timeline">
+        <!-- Top hour labels -->
+        <div class="top-labels">
+          ${ticks.map(
+              (t) => html`
+                <div class="top-label" style="left: ${t.posPercent}%">
+                  ${t.label}
+                </div>
+              `
+          )}
+        </div>
+
+        <!-- Middle section -->
+        <div
+            class="track"
+            style="
+            height: ${this.height}px;
+            border-radius: ${this.borderRadius}px;
+          "
+        >
+          <!-- Red working/outage blocks -->
+          ${normalized.map((seg, idx) => {
+            const label =
+                `${seg.title ?? "Interval"}` +
+                (seg.status ? ` (${seg.status})` : "") +
+                ` ${seg.start}–${seg.end}`;
+
+            return html`
+              <div
+                  class="block"
+                  title="${label}"
+                  style="
+                  left: ${seg.leftPercent}%;
+                  width: ${seg.widthPercent}%;
+                  border-radius: ${this.borderRadius}px;
+                "
+              ></div>
+            `;
+          })}
+
+          <!-- Vertical hour lines (optional) -->
+          ${this.enableVerticalLine
+              ? ticks.map((t, index) =>
+                  index === 0 || index === ticks.length - 1
+                      ? nothing
+                      : html`
+                        <div class="hour-line" style="left: ${t.posPercent}%"></div>
+                      `
+              )
+              : nothing}
+        </div>
+
+        <!-- Bottom start/end labels -->
+        <div class="bottom-labels">
+          ${normalized.map((seg, idx) => {
+            const startLeft = seg.leftPercent;
+            const endLeft = seg.leftPercent + seg.widthPercent;
+
+            return html`
+              <div class="bottom-label" style="left: ${startLeft}%">
+                ${seg.start}
               </div>
-            `
-        )}
-      </div>
-
-      <!-- Middle section -->
-      <div
-          class="track"
-          style="
-          height: ${this.height}px;
-          border-radius: ${this.borderRadius}px;
-        "
-      >
-        <!-- Red working/outage blocks -->
-        ${normalized.map((seg, idx) => {
-          const label =
-              `${seg.title ?? "Interval"}` +
-              (seg.status ? ` (${seg.status})` : "") +
-              ` ${seg.start}–${seg.end}`;
-
-          return html`
-            <div
-                class="block"
-                title="${label}"
-                style="
-                left: ${seg.leftPercent}%;
-                width: ${seg.widthPercent}%;
-                border-radius: ${this.borderRadius}px;
-              "
-            ></div>
-          `;
-        })}
-
-        <!-- Vertical hour lines (optional) -->
-        ${this.enableVerticalLine
-            ? ticks.map((t, index) =>
-                index === 0 || index === ticks.length - 1
-                    ? nothing
-                    : html`
-                      <div class="hour-line" style="left: ${t.posPercent}%"></div>
-                    `
-            )
-            : nothing}
-      </div>
-
-      <!-- Bottom start/end labels -->
-      <div class="bottom-labels">
-        ${normalized.map((seg, idx) => {
-          const startLeft = seg.leftPercent;
-          const endLeft = seg.leftPercent + seg.widthPercent;
-
-          return html`
-            <div class="bottom-label" style="left: ${startLeft}%">
-              ${seg.start}
-            </div>
-            <div class="bottom-label" style="left: ${endLeft}%">
-              ${seg.end}
-            </div>
-          `;
-        })}
+              <div class="bottom-label" style="left: ${endLeft}%">
+                ${seg.end}
+              </div>
+            `;
+          })}
+        </div>
       </div>
     `;
   }
