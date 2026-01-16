@@ -350,12 +350,14 @@ export class OutageTimeline extends LitElement {
           ${normalized.map((seg, idx) => {
             const startLeft = seg.leftPercent;
             const endLeft = seg.leftPercent + seg.widthPercent;
+            const startClass = startLeft === 0 ? "label-left" : "";
+            const endClass = endLeft === 100 ? "label-right" : "";
 
             return html`
-              <div class="bottom-label" style="left: ${startLeft}%">
+              <div class="bottom-label ${startClass}" style="left: ${startLeft}%">
                 ${seg.start}
               </div>
-              <div class="bottom-label" style="left: ${endLeft}%">
+              <div class="bottom-label ${endClass}" style="left: ${endLeft}%">
                 ${seg.end}
               </div>
             `;
